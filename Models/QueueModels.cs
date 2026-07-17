@@ -42,8 +42,9 @@ public class MM1RandomSimulationRequest
 {
     public double Lambda { get; set; }              // Poisson mean for minutes between arrivals
     public double Mu { get; set; }                  // mean used in service = -Mu * ln(R)
-    public int NumberOfCustomers { get; set; } = 8;
     public int? Seed { get; set; }
+    // No customer count: the run stops once the Poisson cumulative probability reaches 0.9999,
+    // so the number of customers is whatever that coverage requires.
 }
 
 // Observed M/M/1. Interarrival, arrival and service are all pre-recorded (in minutes), so

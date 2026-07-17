@@ -83,14 +83,13 @@ public class QueueController : ControllerBase
         if (req.Mu <= 0)
             return BadRequest(new { message = "Mu (μ) must be greater than 0." });
 
-        if (req.NumberOfCustomers < 1)
-            return BadRequest(new { message = "Number of customers must be at least 1." });
-
         var random = req.Seed.HasValue ? new Random(req.Seed.Value) : Random.Shared;
 
-        // The sampling table spans the whole distribution so draws never clamp; it is at least
-        // NumberOfCustomers long so every customer row has a lookup row to display.
-        BuildPoissonLookupTable(req.Lambda, req.NumberOfCustomers, out double[] cumulative, out double[] lookup);
+        // The table grows until the cumulative Poisson probability reaches 0.9999 (that crossing
+        // row included). Its length is the number of customers we simulate — there is no separate
+        // customer-count input.
+        BuildPoissonLookupTable(req.Lambda, out double[] cumulative, out double[] lookup);
+        int numberOfCustomers = cumulative.Length;
 
         var rows = new List<MM1SimulationRow>();
 
@@ -99,7 +98,7 @@ public class QueueController : ControllerBase
         double totalServiceTime = 0;
         double waitedCustomers = 0;
 
-        for (int customerNo = 1; customerNo <= req.NumberOfCustomers; customerNo++)
+        for (int customerNo = 1; customerNo <= numberOfCustomers; customerNo++)
         {
             int k = customerNo - 1;
 
@@ -146,7 +145,7 @@ public class QueueController : ControllerBase
             previousEndTime = serviceEndTime;
         }
 
-        return Ok(BuildResult(rows, 1, req.Lambda, req.Mu, totalServiceTime, waitedCustomers, req.NumberOfCustomers));
+        return Ok(BuildResult(rows, 1, req.Lambda, req.Mu, totalServiceTime, waitedCustomers, numberOfCustomers));
     }
 
 
@@ -217,11 +216,12 @@ public class QueueController : ControllerBase
 
 
     // Poisson lookup table for the M/M/1 random run. Rows run k = 0, 1, 2, ... until the
-    // cumulative probability effectively reaches 1, and always at least minRows long so every
-    // customer row has a table row to show. The recurrence avoids the Infinity that
+    // cumulative probability reaches 0.9999 (that crossing row included); the table length is
+    // therefore the number of customers the simulation runs. maxRows is only a safety guard
+    // against a pathological mean. The recurrence avoids the Infinity that
     // e^-m * m^k / k! hits past k ≈ 170.
     private static void BuildPoissonLookupTable(
-        double mean, int minRows, out double[] cumulative, out double[] lookup)
+        double mean, out double[] cumulative, out double[] lookup)
     {
         const double coverage = 0.9999;
         const int maxRows = 1000;
@@ -241,7 +241,7 @@ public class QueueController : ControllerBase
             runningTotal += pmf;
             cumulativeList.Add(runningTotal); // sum of p(0..k)
 
-            if (k + 1 >= minRows && runningTotal >= coverage)
+            if (runningTotal >= coverage)
                 break;
         }
 

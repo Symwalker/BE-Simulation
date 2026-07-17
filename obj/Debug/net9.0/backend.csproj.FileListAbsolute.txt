@@ -47,3 +47,4 @@ C:\Users\T590\AppData\Local\Temp\qb2\backend.deps.json
 C:\Users\T590\AppData\Local\Temp\qb2\backend.runtimeconfig.json
 C:\Users\T590\AppData\Local\Temp\qb2\backend.dll
 C:\Users\T590\AppData\Local\Temp\qb2\backend.pdb
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.sourcelink.json
