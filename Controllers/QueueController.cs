@@ -279,69 +279,261 @@ public class QueueController : ControllerBase
     }
 
 
-    [HttpPost("mmc/simulate")]
-    public ActionResult<MM1SimulationResult> SimulateMMC([FromBody] MMCSimulationRequest req)
+    // ---------------------------------------------------------------------------------
+    // M/M/c RANDOM simulation. Mirrors M/M/1 random exactly, only spread across c servers:
+    // Lambda and Mu are used directly as typed (per minute), the Poisson table grows until the
+    // cumulative probability reaches 0.9999 (that count = number of customers), and service is
+    // ROUND(-Mu * ln(R)). No customer-count input, no seed, no unit conversion.
+    // ---------------------------------------------------------------------------------
+    [HttpPost("mmc/random")]
+    public ActionResult<MM1SimulationResult> SimulateMMCRandom([FromBody] MMCRandomSimulationRequest req)
     {
-        double interArrivalTime = ConvertTimeToMinutes(req.InterArrivalTime, req.InterArrivalTimeUnit);
-        double serviceTime = ConvertTimeToMinutes(req.ServiceTime, req.ServiceTimeUnit);
+        if (req.Lambda <= 0)
+            return BadRequest(new { message = "Lambda (λ) must be greater than 0." });
 
-        if (interArrivalTime <= 0 || serviceTime <= 0)
-            return BadRequest(new { message = "InterArrivalTime and ServiceTime must be greater than 0." });
+        if (req.Mu <= 0)
+            return BadRequest(new { message = "Mu (μ) must be greater than 0." });
 
         if (req.NumberOfServers < 1)
             return BadRequest(new { message = "Number of servers must be at least 1." });
 
-        if (req.NumberOfCustomers < 1)
-            return BadRequest(new { message = "Number of customers must be at least 1." });
+        var random = Random.Shared;
 
-        double lambda = 1.0 / interArrivalTime;
-        double mu = 1.0 / serviceTime;
+        // The table grows until the cumulative Poisson probability reaches 0.9999 (crossing row
+        // included); its length is the number of customers we simulate.
+        BuildPoissonLookupTable(req.Lambda, out double[] cumulative, out double[] lookup);
+        int numberOfCustomers = cumulative.Length;
 
-        // No stability gate: a finite-customer simulation is valid even when the servers are
-        // overloaded (λ >= c·μ). The table just shows the queue growing.
-        var random = req.Seed.HasValue ? new Random(req.Seed.Value) : Random.Shared;
+        var rows = new List<MM1SimulationRow>();
 
-        // Same MEAN-driven arrivals (Poisson lookup, mean = interArrivalTime) and service
-        // (exponential, mean = serviceTime) as M/M/1, but spread across c servers. Using the
-        // mean times keeps the table unit-consistent for both minutes and hours.
-        return Ok(RunMultiServerSimulation(
-            req.NumberOfServers, req.NumberOfCustomers, lambda, mu, interArrivalTime, random,
-            () => SampleExponential(random, serviceTime)));
+        double previousArrivalTime = 0;
+        double totalServiceTime = 0;
+        double waitedCustomers = 0;
+
+        // Each server's next free time. A customer is taken by whichever server frees up
+        // earliest; ties go to the lowest-numbered server.
+        double[] serverFreeAt = new double[req.NumberOfServers];
+
+        for (int customerNo = 1; customerNo <= numberOfCustomers; customerNo++)
+        {
+            int k = customerNo - 1;
+
+            double interArrival = customerNo == 1
+                ? 0
+                : SampleFromLookupTable(random, lookup, cumulative);
+            double arrivalTime = customerNo == 1 ? 0 : previousArrivalTime + interArrival;
+
+            // Service = ROUND(-Mu * ln(R)), Mu used directly as typed.
+            double serviceTime = Math.Round(
+                -req.Mu * Math.Log(1.0 - random.NextDouble()), MidpointRounding.AwayFromZero);
+
+            int chosenServer = 0;
+            for (int s = 1; s < req.NumberOfServers; s++)
+            {
+                if (serverFreeAt[s] < serverFreeAt[chosenServer])
+                    chosenServer = s;
+            }
+
+            double serviceStartTime = Math.Max(arrivalTime, serverFreeAt[chosenServer]);
+            double serviceEndTime = serviceStartTime + serviceTime;
+            serverFreeAt[chosenServer] = serviceEndTime;
+
+            double turnaroundTime = serviceEndTime - arrivalTime;
+            double waitTime = turnaroundTime - serviceTime;
+            double responseTime = serviceStartTime - arrivalTime;
+
+            rows.Add(new MM1SimulationRow
+            {
+                CustomerNo = customerNo,
+                ServerNumber = chosenServer + 1,
+                CumulativeProbability = Math.Round(cumulative[k], 4),
+                CumulativeProbabilityLookup = Math.Round(lookup[k], 4),
+                MinutesBetweenArrivals = k,
+                InterArrivalTime = Math.Round(interArrival, 4),
+                ArrivalTime = Math.Round(arrivalTime, 4),
+                ServiceTime = Math.Round(serviceTime, 4),
+                ServiceStartTime = Math.Round(serviceStartTime, 4),
+                ServiceEndTime = Math.Round(serviceEndTime, 4),
+                WaitTime = Math.Round(waitTime, 4),
+                TurnaroundTime = Math.Round(turnaroundTime, 4),
+                ResponseTime = Math.Round(responseTime, 4),
+                Waited = waitTime > 0
+            });
+
+            if (waitTime > 0)
+                waitedCustomers += 1;
+
+            totalServiceTime += serviceTime;
+            previousArrivalTime = arrivalTime;
+        }
+
+        return Ok(BuildResult(
+            rows, req.NumberOfServers, req.Lambda, req.Mu, totalServiceTime, waitedCustomers, numberOfCustomers));
     }
 
 
-    [HttpPost("mg1-uniform")]
-    public ActionResult<MM1SimulationResult> SimulateMG1Uniform([FromBody] MG1UniformSimulationRequest req)
+    // ---------------------------------------------------------------------------------
+    // M/M/c OBSERVED simulation. Interarrival, arrival and service are all given (in minutes)
+    // and spread across c servers; nothing is generated. We only compute the timing columns.
+    // ---------------------------------------------------------------------------------
+    [HttpPost("mmc/observed")]
+    public ActionResult<MM1SimulationResult> SimulateMMCObserved([FromBody] MMCObservedSimulationRequest req)
     {
-        double interArrivalTime = ConvertTimeToMinutes(req.InterArrivalTime, req.InterArrivalTimeUnit);
-        double minValue = ConvertTimeToMinutes(req.MinValue, req.ServiceTimeUnit);
-        double maxValue = ConvertTimeToMinutes(req.MaxValue, req.ServiceTimeUnit);
+        if (req.Rows == null || req.Rows.Count == 0)
+            return BadRequest(new { message = "Observed data must contain at least one row." });
 
-        if (interArrivalTime <= 0)
-            return BadRequest(new { message = "InterArrivalTime must be greater than 0." });
+        int numberOfServers = req.NumberOfServers < 1 ? 1 : req.NumberOfServers;
 
-        if (minValue < 0)
+        var rows = new List<MM1SimulationRow>();
+
+        double totalServiceTime = 0;
+        double totalInterArrival = 0;
+        double waitedCustomers = 0;
+
+        double[] serverFreeAt = new double[numberOfServers];
+
+        foreach (var observed in req.Rows)
+        {
+            double interArrival = observed.InterArrivalTime;
+            double arrivalTime = observed.ArrivalTime;
+            double serviceTime = observed.ServiceTime;
+
+            int chosenServer = 0;
+            for (int s = 1; s < numberOfServers; s++)
+            {
+                if (serverFreeAt[s] < serverFreeAt[chosenServer])
+                    chosenServer = s;
+            }
+
+            double serviceStartTime = Math.Max(arrivalTime, serverFreeAt[chosenServer]);
+            double serviceEndTime = serviceStartTime + serviceTime;
+            serverFreeAt[chosenServer] = serviceEndTime;
+
+            double turnaroundTime = serviceEndTime - arrivalTime;
+            double waitTime = turnaroundTime - serviceTime;
+            double responseTime = serviceStartTime - arrivalTime;
+
+            rows.Add(new MM1SimulationRow
+            {
+                CustomerNo = observed.CustomerNo,
+                ServerNumber = chosenServer + 1,
+                CumulativeProbability = 0,
+                CumulativeProbabilityLookup = 0,
+                MinutesBetweenArrivals = 0,
+                InterArrivalTime = Math.Round(interArrival, 4),
+                ArrivalTime = Math.Round(arrivalTime, 4),
+                ServiceTime = Math.Round(serviceTime, 4),
+                ServiceStartTime = Math.Round(serviceStartTime, 4),
+                ServiceEndTime = Math.Round(serviceEndTime, 4),
+                WaitTime = Math.Round(waitTime, 4),
+                TurnaroundTime = Math.Round(turnaroundTime, 4),
+                ResponseTime = Math.Round(responseTime, 4),
+                Waited = waitTime > 0
+            });
+
+            if (waitTime > 0)
+                waitedCustomers += 1;
+
+            totalServiceTime += serviceTime;
+            totalInterArrival += interArrival;
+        }
+
+        double averageInterArrival = totalInterArrival / rows.Count;
+        double averageService = totalServiceTime / rows.Count;
+        double lambda = averageInterArrival > 0 ? 1.0 / averageInterArrival : 0;
+        double mu = averageService > 0 ? 1.0 / averageService : 0;
+
+        return Ok(BuildResult(
+            rows, numberOfServers, lambda, mu, totalServiceTime, waitedCustomers, rows.Count));
+    }
+
+
+    // ---------------------------------------------------------------------------------
+    // M/G/1 (uniform) RANDOM simulation. Same arrival convention as M/M/1 random — Lambda is the
+    // Poisson mean, used directly as typed — but service is uniform on [a, b] rather than
+    // exponential: service = ROUND(a + (b - a) * R). Single server. The Poisson table grows until
+    // the cumulative probability reaches 0.9999 (that count = number of customers). No seed.
+    // ---------------------------------------------------------------------------------
+    [HttpPost("mg1-uniform/random")]
+    public ActionResult<MM1SimulationResult> SimulateMG1UniformRandom([FromBody] MG1UniformRandomSimulationRequest req)
+    {
+        if (req.Lambda <= 0)
+            return BadRequest(new { message = "Lambda (λ) must be greater than 0." });
+
+        if (req.MinValue < 0)
             return BadRequest(new { message = "Min Value must be greater than or equal to 0." });
 
-        if (maxValue <= minValue)
+        if (req.MaxValue <= req.MinValue)
             return BadRequest(new { message = "Max Value must be greater than Min Value." });
 
-        if (req.NumberOfCustomers < 1)
-            return BadRequest(new { message = "Number of customers must be at least 1." });
+        var random = Random.Shared;
 
-        double lambda = 1.0 / interArrivalTime;
+        // The table grows until the cumulative Poisson probability reaches 0.9999 (crossing row
+        // included); its length is the number of customers we simulate.
+        BuildPoissonLookupTable(req.Lambda, out double[] cumulative, out double[] lookup);
+        int numberOfCustomers = cumulative.Length;
 
-        // Service is uniform on [a, b], so its mean is (a + b) / 2 and mu is that mean's reciprocal.
-        double meanServiceTime = (minValue + maxValue) / 2.0;
-        double mu = 1.0 / meanServiceTime;
+        // Service is uniform on [a, b]; its mean is (a + b) / 2, and mu is that mean's reciprocal
+        // (reported in the summary only — generation uses the uniform draw directly).
+        double meanServiceTime = (req.MinValue + req.MaxValue) / 2.0;
+        double mu = meanServiceTime > 0 ? 1.0 / meanServiceTime : 0;
 
-        var random = req.Seed.HasValue ? new Random(req.Seed.Value) : Random.Shared;
+        var rows = new List<MM1SimulationRow>();
 
-        // Arrivals use the Poisson lookup with mean = interArrivalTime (in minutes); service is
-        // drawn as a + (b - a) * R, with R a uniform random number in [0, 1).
-        return Ok(RunMultiServerSimulation(
-            1, req.NumberOfCustomers, lambda, mu, interArrivalTime, random,
-            () => minValue + (maxValue - minValue) * random.NextDouble()));
+        double previousArrivalTime = 0;
+        double previousEndTime = 0;
+        double totalServiceTime = 0;
+        double waitedCustomers = 0;
+
+        for (int customerNo = 1; customerNo <= numberOfCustomers; customerNo++)
+        {
+            int k = customerNo - 1;
+
+            double interArrival = customerNo == 1
+                ? 0
+                : SampleFromLookupTable(random, lookup, cumulative);
+            double arrivalTime = customerNo == 1 ? 0 : previousArrivalTime + interArrival;
+
+            // Uniform service on [a, b], rounded to a whole minute (AwayFromZero mirrors Excel's
+            // ROUND) so downstream columns stay clean integers, matching the M/M/1 service column.
+            double serviceTime = Math.Round(
+                req.MinValue + (req.MaxValue - req.MinValue) * random.NextDouble(),
+                MidpointRounding.AwayFromZero);
+
+            double serviceStartTime = Math.Max(arrivalTime, previousEndTime);
+            double serviceEndTime = serviceStartTime + serviceTime;
+            double turnaroundTime = serviceEndTime - arrivalTime;
+            double waitTime = turnaroundTime - serviceTime;
+            double responseTime = serviceStartTime - arrivalTime;
+
+            rows.Add(new MM1SimulationRow
+            {
+                CustomerNo = customerNo,
+                ServerNumber = 1,
+                CumulativeProbability = Math.Round(cumulative[k], 4),
+                CumulativeProbabilityLookup = Math.Round(lookup[k], 4),
+                MinutesBetweenArrivals = k,
+                InterArrivalTime = Math.Round(interArrival, 4),
+                ArrivalTime = Math.Round(arrivalTime, 4),
+                ServiceTime = Math.Round(serviceTime, 4),
+                ServiceStartTime = Math.Round(serviceStartTime, 4),
+                ServiceEndTime = Math.Round(serviceEndTime, 4),
+                WaitTime = Math.Round(waitTime, 4),
+                TurnaroundTime = Math.Round(turnaroundTime, 4),
+                ResponseTime = Math.Round(responseTime, 4),
+                Waited = waitTime > 0
+            });
+
+            if (waitTime > 0)
+                waitedCustomers += 1;
+
+            totalServiceTime += serviceTime;
+            previousArrivalTime = arrivalTime;
+            previousEndTime = serviceEndTime;
+        }
+
+        return Ok(BuildResult(
+            rows, 1, req.Lambda, mu, totalServiceTime, waitedCustomers, numberOfCustomers));
     }
 
 

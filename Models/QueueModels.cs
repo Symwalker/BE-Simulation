@@ -24,15 +24,23 @@ public class MM1SimulationRequest
 }
 
 
-public class MMCSimulationRequest
+// Random M/M/c. Like M/M/1 random: Lambda and Mu are used DIRECTLY as typed (per minute) —
+// no rate inversion, no unit conversion. Lambda is the Poisson mean for minutes between
+// arrivals; Mu feeds service = -Mu * ln(R). The run stops once the Poisson cumulative
+// probability reaches 0.9999, so there is no customer-count input.
+public class MMCRandomSimulationRequest
 {
-    public double InterArrivalTime { get; set; }
-    public double ServiceTime { get; set; }
+    public double Lambda { get; set; }              // Poisson mean for minutes between arrivals
+    public double Mu { get; set; }                  // mean used in service = -Mu * ln(R)
     public int NumberOfServers { get; set; } = 2;   // c
-    public int NumberOfCustomers { get; set; } = 8;
-    public int? Seed { get; set; }
-    public TimeUnit InterArrivalTimeUnit { get; set; } = TimeUnit.Minutes;
-    public TimeUnit ServiceTimeUnit { get; set; } = TimeUnit.Minutes;
+}
+
+// Observed M/M/c. Interarrival, arrival and service are all pre-recorded (in minutes) and
+// spread across c servers, so nothing is generated and there are no Poisson lookup columns.
+public class MMCObservedSimulationRequest
+{
+    public List<ObservedCustomerRow> Rows { get; set; } = [];
+    public int NumberOfServers { get; set; } = 2;   // c
 }
 
 // Random M/M/1. Lambda and Mu are used DIRECTLY as typed (per minute), exactly as the
@@ -54,15 +62,16 @@ public class MM1ObservedSimulationRequest
     public List<ObservedCustomerRow> Rows { get; set; } = [];
 }
 
-public class MG1UniformSimulationRequest
+// Random M/G/1 with uniform service. Like the other random models, Lambda is used DIRECTLY as
+// typed (per minute) as the Poisson mean for minutes between arrivals — no rate inversion, no
+// unit conversion, no seed. Service is uniform on [MinValue, MaxValue] (both in minutes), drawn
+// as a + (b - a) * R. The run stops once the Poisson cumulative probability reaches 0.9999, so
+// there is no customer-count input.
+public class MG1UniformRandomSimulationRequest
 {
-    public double InterArrivalTime { get; set; }
-    public double MinValue { get; set; }          // a — shortest service time
-    public double MaxValue { get; set; }          // b — longest service time
-    public int NumberOfCustomers { get; set; } = 8;
-    public int? Seed { get; set; }
-    public TimeUnit InterArrivalTimeUnit { get; set; } = TimeUnit.Minutes;
-    public TimeUnit ServiceTimeUnit { get; set; } = TimeUnit.Minutes;
+    public double Lambda { get; set; }            // Poisson mean for minutes between arrivals
+    public double MinValue { get; set; }          // a — shortest service time (minutes)
+    public double MaxValue { get; set; }          // b — longest service time (minutes)
 }
 
 // One row of pre-recorded ("observed") data. Interarrival, arrival, and service are all
