@@ -1,0 +1,49 @@
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\appsettings.Development.json
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\appsettings.json
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\backend.staticwebassets.endpoints.json
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\backend.exe
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\backend.deps.json
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\backend.runtimeconfig.json
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\backend.dll
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\backend.pdb
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
+D:\7th semes\simulation-proj\QueueApp\backend\bin\Debug\net9.0\Microsoft.OpenApi.dll
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.csproj.AssemblyReference.cache
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.GeneratedMSBuildEditorConfig.editorconfig
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.AssemblyInfoInputs.cache
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.AssemblyInfo.cs
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.csproj.CoreCompileInputs.cache
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.MvcApplicationPartsAssemblyInfo.cs
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.MvcApplicationPartsAssemblyInfo.cache
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\scopedcss\bundle\backend.styles.css
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets.build.json
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets.development.json
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets.build.endpoints.json
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets\msbuild.backend.Microsoft.AspNetCore.StaticWebAssets.props
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets\msbuild.backend.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets\msbuild.build.backend.props
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets\msbuild.buildMultiTargeting.backend.props
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets\msbuild.buildTransitive.backend.props
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\staticwebassets.pack.json
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.csproj.Up2Date
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.dll
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\refint\backend.dll
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.pdb
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.genruntimeconfig.cache
+D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\ref\backend.dll
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\appsettings.Development.json
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\appsettings.json
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\backend.staticwebassets.endpoints.json
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\backend.exe
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\backend.deps.json
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\backend.runtimeconfig.json
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\backend.dll
+C:\Users\T590\AppData\Local\Temp\qbuild_verify\backend.pdb
+C:\Users\T590\AppData\Local\Temp\qb2\appsettings.Development.json
+C:\Users\T590\AppData\Local\Temp\qb2\appsettings.json
+C:\Users\T590\AppData\Local\Temp\qb2\backend.staticwebassets.endpoints.json
+C:\Users\T590\AppData\Local\Temp\qb2\backend.exe
+C:\Users\T590\AppData\Local\Temp\qb2\backend.deps.json
+C:\Users\T590\AppData\Local\Temp\qb2\backend.runtimeconfig.json
+C:\Users\T590\AppData\Local\Temp\qb2\backend.dll
+C:\Users\T590\AppData\Local\Temp\qb2\backend.pdb
