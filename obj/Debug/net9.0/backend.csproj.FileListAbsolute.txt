@@ -48,3 +48,19 @@ C:\Users\T590\AppData\Local\Temp\qb2\backend.runtimeconfig.json
 C:\Users\T590\AppData\Local\Temp\qb2\backend.dll
 C:\Users\T590\AppData\Local\Temp\qb2\backend.pdb
 D:\7th semes\simulation-proj\QueueApp\backend\obj\Debug\net9.0\backend.sourcelink.json
+C:\Users\T590\AppData\Local\Temp\qb3\appsettings.Development.json
+C:\Users\T590\AppData\Local\Temp\qb3\appsettings.json
+C:\Users\T590\AppData\Local\Temp\qb3\backend.staticwebassets.endpoints.json
+C:\Users\T590\AppData\Local\Temp\qb3\backend.exe
+C:\Users\T590\AppData\Local\Temp\qb3\backend.deps.json
+C:\Users\T590\AppData\Local\Temp\qb3\backend.runtimeconfig.json
+C:\Users\T590\AppData\Local\Temp\qb3\backend.dll
+C:\Users\T590\AppData\Local\Temp\qb3\backend.pdb
+C:\Users\T590\AppData\Local\Temp\qb4\appsettings.Development.json
+C:\Users\T590\AppData\Local\Temp\qb4\appsettings.json
+C:\Users\T590\AppData\Local\Temp\qb4\backend.staticwebassets.endpoints.json
+C:\Users\T590\AppData\Local\Temp\qb4\backend.exe
+C:\Users\T590\AppData\Local\Temp\qb4\backend.deps.json
+C:\Users\T590\AppData\Local\Temp\qb4\backend.runtimeconfig.json
+C:\Users\T590\AppData\Local\Temp\qb4\backend.dll
+C:\Users\T590\AppData\Local\Temp\qb4\backend.pdb
